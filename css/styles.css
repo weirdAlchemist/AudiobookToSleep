@@ -95,6 +95,12 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .night.checking .night-inner { opacity: 1; }
 .night-status { font-size: 1.6rem; margin: 8px 0; }
 .night.checking .night-status { color: var(--accent); }
+.camera-preview {
+  display: block; width: 96px; height: 72px; margin: 0 auto 8px; object-fit: cover;
+  border-radius: 10px; border: 2px solid transparent; opacity: .5; transform: scaleX(-1);
+}
+.camera-preview.moving { border-color: var(--accent); }
+#camera-status:empty { display: none; }
 .night-countdown { font-size: 3rem; margin: 0 0 24px; font-variant-numeric: tabular-nums; color: var(--muted); }
 
 dialog {

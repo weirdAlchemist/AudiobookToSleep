@@ -3,6 +3,7 @@ import { BookPlayer } from './player.js';
 import { formatTime } from './positions.js';
 import * as library from './library.js';
 import { VoiceListener, voiceSupported, requestMicPermission } from './voice.js';
+import { CameraWatcher, cameraSupported, requestCameraPermission } from './camera.js';
 
 const $ = (id) => document.getElementById(id);
 const SKIP_SEC = 30;
@@ -13,7 +14,8 @@ const SAVE_EVERY_MS = 15_000;
 // ---------- Settings ----------
 
 const SETTINGS_KEY = 'ats-settings';
-const APP_DEFAULTS = { ...DEFAULT_SETTINGS, fadeOutSec: 30, keepScreenOn: true, voiceEnabled: true };
+const APP_DEFAULTS = { ...DEFAULT_SETTINGS, fadeOutSec: 30, keepScreenOn: true, voiceEnabled: true,
+  cameraEnabled: false };
 
 function loadSettings() {
   try {
@@ -40,6 +42,7 @@ let tickTimer = null;
 let lastSavedAt = 0;
 let wakeLock = null;
 let voiceOn = false;   // voice answers usable in this session (supported + mic allowed)
+let cameraOn = false;  // wave answers usable in this session (supported + camera allowed)
 
 // ---------- Helpers ----------
 
@@ -271,16 +274,60 @@ async function startSession() {
   tick();
   voiceOn = settings.voiceEnabled && voiceSupported && await requestMicPermission();
   if (settings.voiceEnabled && voiceSupported && !voiceOn) toast('Microphone blocked: tap to answer instead.');
+  cameraOn = settings.cameraEnabled && cameraSupported && await requestCameraPermission();
+  if (settings.cameraEnabled && cameraSupported && !cameraOn) toast('Camera blocked: tap to answer instead.');
   renderNightHint();
 }
 
 function renderNightHint() {
-  $('night-hint').textContent = voiceOn
-    ? 'When the volume dips, say "I\'m awake" (or tap the screen / press skip on your headphones). '
-      + 'Say "good night" to stop now. Otherwise the book fades out and keeps your place.'
-    : 'Tap anywhere if you\'re awake. When the volume dips, tap the screen or press skip on your '
-      + 'headphones / lock screen, or the book fades out and keeps your place.';
+  const ways = [
+    voiceOn && 'say "I\'m awake"',
+    cameraOn && 'wave at the phone',
+    'tap the screen',
+    'press skip on your headphones',
+  ].filter(Boolean);
+  const answer = `${ways.slice(0, -1).join(', ')} or ${ways.at(-1)}`;
+  $('night-hint').textContent = `When the volume dips, ${answer}. `
+    + (voiceOn ? 'Say "good night" to stop now. ' : '')
+    + 'Otherwise the book fades out and keeps your place.';
 }
+
+function checkInPrompt() {
+  if (voiceOn) return 'Still awake? Say "I\'m awake"';
+  if (cameraOn) return 'Still awake? Wave!';
+  return 'Still awake? Tap!';
+}
+
+// Mic and camera only run while waiting for an answer: the rest of the night
+// the mic would mostly hear the book, and the camera would watch you sleep.
+function startAnswerListeners() {
+  if (voiceOn) voice.start();
+  if (cameraOn) {
+    $('camera-preview').hidden = false;
+    camera.start();
+  }
+}
+
+function stopAnswerListeners() {
+  voice.stop();
+  camera.stop();
+  $('camera-preview').hidden = true;
+  $('camera-status').textContent = '';
+}
+
+const camera = new CameraWatcher($('camera-preview'), {
+  onWave: () => signOfLife(),
+  onStatus: ({ tooDark, moving }) => {
+    $('camera-preview').classList.toggle('moving', moving);
+    $('camera-status').textContent = tooDark ? 'Too dark for the camera to see you' : '';
+  },
+  onError: () => {
+    cameraOn = false;
+    stopAnswerListeners();
+    renderNightHint();
+    toast('Camera unavailable: tap to answer instead.');
+  },
+});
 
 // Only listen while waiting for an answer: the rest of the night the mic would
 // mostly hear the book.
@@ -314,8 +361,8 @@ function renderCountdown(now) {
 function onCheckIn() {
   player.fadeTo(voiceOn ? VOICE_CHECK_IN_VOLUME : CHECK_IN_VOLUME, 2000);
   $('night-view').classList.add('checking');
-  $('night-status').textContent = voiceOn ? 'Still awake? Say "I\'m awake"' : 'Still awake? Tap!';
-  if (voiceOn) voice.start();
+  $('night-status').textContent = checkInPrompt();
+  startAnswerListeners();
 }
 
 function signOfLife() {
@@ -325,7 +372,7 @@ function signOfLife() {
     // Caught it during the fade: carry on listening.
     if (fadingOut.reason === 'no-response' && detector.wake(now, player.position)) {
       fadingOut = null;
-      voice.stop();
+      stopAnswerListeners();
       player.fadeTo(1, 1500);
       $('night-status').textContent = 'Listening…';
       $('night-view').classList.remove('checking');
@@ -335,7 +382,7 @@ function signOfLife() {
   }
   const event = detector.markAwake(now, player.position);
   if (event?.type === 'awake-confirmed') {
-    voice.stop();
+    stopAnswerListeners();
     player.fadeTo(1, 1500);
     $('night-view').classList.remove('checking');
     $('night-status').textContent = 'Listening…';
@@ -352,8 +399,8 @@ $('end-sleep').addEventListener('click', () => endSession('ended'));
 
 async function onAsleep(event) {
   fadingOut = event;
-  // Keep listening through the fade so "I'm awake" can still rescue it.
-  if (event.reason !== 'no-response') voice.stop();
+  // Keep listening through the fade so "I'm awake" or a wave can still rescue it.
+  if (event.reason !== 'no-response') stopAnswerListeners();
   $('night-view').classList.remove('checking');
   $('night-status').textContent = event.reason === 'max-session' ? 'Time limit reached' : 'Good night 🌙';
   const finished = await player.fadeTo(0, settings.fadeOutSec * 1000);
@@ -371,7 +418,7 @@ async function endSession(reason) {
   const lastAwakeAt = detector.lastAwakeAt;
 
   detector.stop();
-  voice.stop();
+  stopAnswerListeners();
   fadingOut = null;
   player.pause();
   player.audio.volume = 1;
@@ -462,6 +509,7 @@ $('open-settings').addEventListener('click', () => {
     else input.value = value;
   }
   form.elements.voiceEnabled.closest('label').hidden = !voiceSupported;
+  form.elements.cameraEnabled.closest('label').hidden = !cameraSupported;
   $('settings').showModal();
 });
 

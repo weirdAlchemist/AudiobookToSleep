@@ -9,10 +9,10 @@ Phones can't see whether you're asleep, so the app asks gently:
 
 1. Start a **sleep session**. The book plays, and the screen goes black.
 2. Every *N* minutes (default 10) the volume **dips**. That's the "still awake?" check.
-3. If you're awake, **say "I'm awake"**, **tap the screen**, or press **skip** on your headphones or
-   lock screen. The volume comes back and the clock restarts. Tapping at any time also counts.
+3. If you're awake, **say "I'm awake"**, **wave at the phone**, **tap the screen**, or press **skip**
+   on your headphones or lock screen. The volume comes back and the clock restarts. Tapping at any time also counts.
 4. If nobody answers within the response window (default 60 s), the book **fades out and stops**.
-   Tap or say "I'm awake" during the fade, and it carries on.
+   Tap, wave or say "I'm awake" during the fade, and it carries on.
 5. The bookmark goes to **the last moment you were known to be awake**, minus a short rewind,
    not to where the audio happened to stop. You slept through the rest.
 
@@ -46,13 +46,30 @@ when a session starts, so the prompt appears while you're still looking at the s
 - Some Android phones play a short beep when the microphone starts listening. Turn voice off in
   Settings if that bothers you.
 
+## Waving at the camera
+
+Turn this on in Settings. During a check-in the front camera turns on, a small dim preview
+appears, and about a second of waving counts as "I'm awake".
+
+- The camera is **on only during a check-in and the fade-out**. Frames are shrunk to 48×36 grey
+  pixels and analysed on the phone. Nothing is recorded or sent anywhere.
+- It looks for **sustained** movement. A single jolt, like turning over in your sleep, is ignored.
+- Changes in overall brightness (auto-exposure, the screen lighting up) don't count as movement,
+  and the first 1.5 s after the camera starts are ignored while it adjusts.
+- **It needs some light.** A night light, a street lamp or a bright screen is enough. In a fully dark
+  room the camera sees nothing, and the night screen says "Too dark for the camera to see you".
+  Use voice in that case.
+- Prop the phone so the front camera faces the bed. Phones block the camera when the screen is
+  off, so keep "Keep screen on" enabled.
+- It's off by default, since it needs the camera permission.
+
 ## Features
 
 - Import one file or a multi-part book (`.mp3`, `.m4a`, `.m4b`, `.wav`, …). Parts are sorted
   naturally (`Part 2` before `Part 10`) and play as one timeline.
 - Books and bookmarks are kept on the device in IndexedDB, so you choose the files only once.
 - Lock-screen and headphone controls through the Media Session API.
-- Optional voice answers to check-ins.
+- Optional voice and camera (wave) answers to check-ins.
 - Installable PWA that works offline after the first load.
 - Keeps a log of the last 30 nights for each book.
 
@@ -60,7 +77,7 @@ when a session starts, so the prompt appears while you're still looking at the s
 
 ```sh
 npm start        # serves on http://localhost:8080
-npm test         # unit tests for the sleep logic, positions and voice commands
+npm test         # unit tests for the sleep logic, positions, voice commands and wave detection
 ```
 
 No build step and no dependencies. Use HTTPS (or `localhost`) for install, wake lock and
@@ -82,8 +99,10 @@ service-worker support. Any static host works, such as GitHub Pages or Netlify.
 | `js/positions.js` | Converts positions between "whole book" seconds and (part, time). |
 | `js/player.js` | Plays several files on one `<audio>` element as a single book, with fades. |
 | `js/voice.js` | Speech recognition during check-ins and voice command matching. |
+| `js/motion-detector.js` | Pure wave detection on small grey frames (frame differencing). |
+| `js/camera.js` | Front camera during check-ins; feeds frames to the motion detector. |
 | `js/library.js` | Stores books, audio blobs and bookmarks in IndexedDB. |
-| `js/app.js` | UI, sleep sessions, voice, Media Session and wake lock. |
+| `js/app.js` | UI, sleep sessions, voice, camera, Media Session and wake lock. |
 
 ## Ideas for later
 

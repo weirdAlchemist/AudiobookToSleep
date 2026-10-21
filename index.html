@@ -61,6 +61,8 @@
       <p id="night-title" class="muted"></p>
       <p id="night-status" class="night-status">Listening…</p>
       <p id="night-countdown" class="night-countdown"></p>
+      <video id="camera-preview" class="camera-preview" playsinline muted hidden></video>
+      <p id="camera-status" class="muted small"></p>
       <p id="night-hint" class="muted small"></p>
       <button id="end-sleep" class="ghost-btn">End session</button>
     </div>
@@ -84,6 +86,8 @@
         Keep screen on (dimmed) during sleep sessions: most reliable timing</label>
       <label class="check"><input name="voiceEnabled" type="checkbox">
         Answer by voice: say "I'm awake" or "good night" (listens only during check-ins)</label>
+      <label class="check"><input name="cameraEnabled" type="checkbox">
+        Answer by waving at the front camera (on only during check-ins; needs some light and the screen on)</label>
       <menu>
         <button value="cancel" formnovalidate class="ghost-btn">Cancel</button>
         <button value="save" class="primary-btn">Save</button>
