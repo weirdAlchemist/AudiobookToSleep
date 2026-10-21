@@ -9,10 +9,10 @@ Phones can't see whether you're asleep, so the app asks gently:
 
 1. Start a **sleep session**. The book plays, and the screen goes black.
 2. Every *N* minutes (default 10) the volume **dips**. That's the "still awake?" check.
-3. If you're awake, **tap the screen** or press **skip** on your headphones or lock screen.
-   The volume comes back and the clock restarts. Tapping at any time also counts.
+3. If you're awake, **say "I'm awake"**, **tap the screen**, or press **skip** on your headphones or
+   lock screen. The volume comes back and the clock restarts. Tapping at any time also counts.
 4. If nobody answers within the response window (default 60 s), the book **fades out and stops**.
-   Tap during the fade if you're still awake, and it carries on.
+   Tap or say "I'm awake" during the fade, and it carries on.
 5. The bookmark goes to **the last moment you were known to be awake**, minus a short rewind,
    not to where the audio happened to stop. You slept through the rest.
 
@@ -26,12 +26,33 @@ your exact position, because you were clearly awake.
 
 All timings are in ⚙︎ Settings.
 
+## Voice answers
+
+Useful when the phone is out of reach on the nightstand. The phone asks for microphone access
+when a session starts, so the prompt appears while you're still looking at the screen.
+
+| Say | Effect |
+| --- | --- |
+| "I'm awake", "still here", "keep going", "continue" | Same as tapping: keep listening |
+| "Good night", "stop playing" | Stop now and keep your exact place |
+
+- The microphone is **on only during a check-in and the fade-out**, not all night. During a
+  check-in the book drops to 20% volume so your voice is heard over it.
+- Only short utterances of four words or fewer count. Narration comes through as long sentences,
+  so a character saying "awake" doesn't answer for you. Single words like "yes" or "stop" are not
+  commands, because they turn up in books all the time.
+- Recognition uses the browser's speech service (Chrome sends the audio to Google's servers,
+  Safari uses Apple's). Commands are English only for now.
+- Some Android phones play a short beep when the microphone starts listening. Turn voice off in
+  Settings if that bothers you.
+
 ## Features
 
 - Import one file or a multi-part book (`.mp3`, `.m4a`, `.m4b`, `.wav`, …). Parts are sorted
   naturally (`Part 2` before `Part 10`) and play as one timeline.
 - Books and bookmarks are kept on the device in IndexedDB, so you choose the files only once.
 - Lock-screen and headphone controls through the Media Session API.
+- Optional voice answers to check-ins.
 - Installable PWA that works offline after the first load.
 - Keeps a log of the last 30 nights for each book.
 
@@ -39,7 +60,7 @@ All timings are in ⚙︎ Settings.
 
 ```sh
 npm start        # serves on http://localhost:8080
-npm test         # unit tests for the sleep logic and multi-part positions
+npm test         # unit tests for the sleep logic, positions and voice commands
 ```
 
 No build step and no dependencies. Use HTTPS (or `localhost`) for install, wake lock and
@@ -60,8 +81,9 @@ service-worker support. Any static host works, such as GitHub Pages or Netlify.
 | `js/sleep-detector.js` | Pure state machine for check-ins, sleep detection and the resume point. No DOM. |
 | `js/positions.js` | Converts positions between "whole book" seconds and (part, time). |
 | `js/player.js` | Plays several files on one `<audio>` element as a single book, with fades. |
+| `js/voice.js` | Speech recognition during check-ins and voice command matching. |
 | `js/library.js` | Stores books, audio blobs and bookmarks in IndexedDB. |
-| `js/app.js` | UI, sleep sessions, Media Session and wake lock. |
+| `js/app.js` | UI, sleep sessions, voice, Media Session and wake lock. |
 
 ## Ideas for later
 

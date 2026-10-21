@@ -61,8 +61,7 @@
       <p id="night-title" class="muted"></p>
       <p id="night-status" class="night-status">Listening…</p>
       <p id="night-countdown" class="night-countdown"></p>
-      <p class="muted small">Tap anywhere if you're awake. When the volume dips, tap the screen
-        or press skip on your headphones / lock screen, or the book fades out and keeps your place.</p>
+      <p id="night-hint" class="muted small"></p>
       <button id="end-sleep" class="ghost-btn">End session</button>
     </div>
   </div>
@@ -83,6 +82,8 @@
         <span><input name="fadeOutSec" type="number" min="0" max="300" required> sec</span></label>
       <label class="check"><input name="keepScreenOn" type="checkbox">
         Keep screen on (dimmed) during sleep sessions: most reliable timing</label>
+      <label class="check"><input name="voiceEnabled" type="checkbox">
+        Answer by voice: say "I'm awake" or "good night" (listens only during check-ins)</label>
       <menu>
         <button value="cancel" formnovalidate class="ghost-btn">Cancel</button>
         <button value="save" class="primary-btn">Save</button>

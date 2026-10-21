@@ -2,16 +2,18 @@ import { SleepDetector, DEFAULT_SETTINGS } from './sleep-detector.js';
 import { BookPlayer } from './player.js';
 import { formatTime } from './positions.js';
 import * as library from './library.js';
+import { VoiceListener, voiceSupported, requestMicPermission } from './voice.js';
 
 const $ = (id) => document.getElementById(id);
 const SKIP_SEC = 30;
 const CHECK_IN_VOLUME = 0.35;
+const VOICE_CHECK_IN_VOLUME = 0.2; // quieter, so the mic hears you over the book
 const SAVE_EVERY_MS = 15_000;
 
 // ---------- Settings ----------
 
 const SETTINGS_KEY = 'ats-settings';
-const APP_DEFAULTS = { ...DEFAULT_SETTINGS, fadeOutSec: 30, keepScreenOn: true };
+const APP_DEFAULTS = { ...DEFAULT_SETTINGS, fadeOutSec: 30, keepScreenOn: true, voiceEnabled: true };
 
 function loadSettings() {
   try {
@@ -37,6 +39,7 @@ let fadingOut = null;  // pending "asleep" event while the book fades out
 let tickTimer = null;
 let lastSavedAt = 0;
 let wakeLock = null;
+let voiceOn = false;   // voice answers usable in this session (supported + mic allowed)
 
 // ---------- Helpers ----------
 
@@ -266,7 +269,29 @@ async function startSession() {
   clearInterval(tickTimer);
   tickTimer = setInterval(tick, 1000);
   tick();
+  voiceOn = settings.voiceEnabled && voiceSupported && await requestMicPermission();
+  if (settings.voiceEnabled && voiceSupported && !voiceOn) toast('Microphone blocked: tap to answer instead.');
+  renderNightHint();
 }
+
+function renderNightHint() {
+  $('night-hint').textContent = voiceOn
+    ? 'When the volume dips, say "I\'m awake" (or tap the screen / press skip on your headphones). '
+      + 'Say "good night" to stop now. Otherwise the book fades out and keeps your place.'
+    : 'Tap anywhere if you\'re awake. When the volume dips, tap the screen or press skip on your '
+      + 'headphones / lock screen, or the book fades out and keeps your place.';
+}
+
+// Only listen while waiting for an answer: the rest of the night the mic would
+// mostly hear the book.
+const voice = new VoiceListener(
+  (command) => (command === 'stop' ? endSession('ended') : signOfLife()),
+  () => {
+    voiceOn = false;
+    renderNightHint();
+    toast('Microphone unavailable: tap to answer instead.');
+  },
+);
 
 function tick() {
   if (!detector) return;
@@ -287,9 +312,10 @@ function renderCountdown(now) {
 }
 
 function onCheckIn() {
-  player.fadeTo(CHECK_IN_VOLUME, 2000);
+  player.fadeTo(voiceOn ? VOICE_CHECK_IN_VOLUME : CHECK_IN_VOLUME, 2000);
   $('night-view').classList.add('checking');
-  $('night-status').textContent = 'Still awake? Tap!';
+  $('night-status').textContent = voiceOn ? 'Still awake? Say "I\'m awake"' : 'Still awake? Tap!';
+  if (voiceOn) voice.start();
 }
 
 function signOfLife() {
@@ -299,6 +325,7 @@ function signOfLife() {
     // Caught it during the fade: carry on listening.
     if (fadingOut.reason === 'no-response' && detector.wake(now, player.position)) {
       fadingOut = null;
+      voice.stop();
       player.fadeTo(1, 1500);
       $('night-status').textContent = 'Listening…';
       $('night-view').classList.remove('checking');
@@ -308,6 +335,7 @@ function signOfLife() {
   }
   const event = detector.markAwake(now, player.position);
   if (event?.type === 'awake-confirmed') {
+    voice.stop();
     player.fadeTo(1, 1500);
     $('night-view').classList.remove('checking');
     $('night-status').textContent = 'Listening…';
@@ -324,6 +352,8 @@ $('end-sleep').addEventListener('click', () => endSession('ended'));
 
 async function onAsleep(event) {
   fadingOut = event;
+  // Keep listening through the fade so "I'm awake" can still rescue it.
+  if (event.reason !== 'no-response') voice.stop();
   $('night-view').classList.remove('checking');
   $('night-status').textContent = event.reason === 'max-session' ? 'Time limit reached' : 'Good night 🌙';
   const finished = await player.fadeTo(0, settings.fadeOutSec * 1000);
@@ -341,6 +371,7 @@ async function endSession(reason) {
   const lastAwakeAt = detector.lastAwakeAt;
 
   detector.stop();
+  voice.stop();
   fadingOut = null;
   player.pause();
   player.audio.volume = 1;
@@ -430,6 +461,7 @@ $('open-settings').addEventListener('click', () => {
     if (input.type === 'checkbox') input.checked = value;
     else input.value = value;
   }
+  form.elements.voiceEnabled.closest('label').hidden = !voiceSupported;
   $('settings').showModal();
 });
 

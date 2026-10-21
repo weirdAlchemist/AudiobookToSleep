@@ -1,8 +1,8 @@
 // Caches the app shell so it opens offline. Audio lives in IndexedDB.
-const CACHE = 'ats-v1';
+const CACHE = 'ats-v2';
 const SHELL = [
   './', 'index.html', 'css/styles.css', 'manifest.webmanifest', 'icons/icon.svg',
-  'js/app.js', 'js/library.js', 'js/player.js', 'js/positions.js', 'js/sleep-detector.js',
+  'js/app.js', 'js/library.js', 'js/player.js', 'js/positions.js', 'js/sleep-detector.js', 'js/voice.js',
 ];
 
 self.addEventListener('install', (event) => {
