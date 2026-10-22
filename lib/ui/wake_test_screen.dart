@@ -12,7 +12,11 @@ import '../answers/voice_listener.dart';
 import '../app_services.dart';
 import '../audio/book_audio_handler.dart';
 import '../core/voice_commands.dart';
+import '../session/app_settings.dart';
+import 'camera_options.dart';
 import 'theme.dart';
+
+typedef CameraFactory = CameraListener Function({CameraLens lens, CameraLight light});
 
 class WakeTestScreen extends StatelessWidget {
   const WakeTestScreen({
@@ -23,12 +27,13 @@ class WakeTestScreen extends StatelessWidget {
   });
 
   final VoiceListener Function() voiceFactory;
-  final CameraListener Function({bool torch}) cameraFactory;
+  final CameraFactory cameraFactory;
 
   /// The built-in player, for the headphone-button test. Null hides it.
   final BookAudioHandler? audio;
 
-  static CameraListener _realCamera({bool torch = false}) => CameraListener(torch: torch);
+  static CameraListener _realCamera({CameraLens lens = CameraLens.front, CameraLight light = CameraLight.off}) =>
+      CameraListener(lens: lens, light: light);
   static VoiceListener _realVoice() =>
       VoiceListener(locales: AppServices.maybeInstance?.settings.voiceLocales ?? const []);
 
@@ -233,16 +238,18 @@ class _VoiceTestState extends State<_VoiceTest> {
 class _CameraTest extends StatefulWidget {
   const _CameraTest({required this.factory});
 
-  final CameraListener Function({bool torch}) factory;
+  final CameraFactory factory;
 
   @override
   State<_CameraTest> createState() => _CameraTestState();
 }
 
 class _CameraTestState extends State<_CameraTest> {
-  late bool _torch = AppServices.maybeInstance?.settings.cameraTorch ?? false;
+  late CameraLens _lens = AppServices.maybeInstance?.settings.cameraLens ?? CameraLens.front;
+  late CameraLight _light = AppServices.maybeInstance?.settings.cameraLight ?? CameraLight.off;
   CameraListener? _camera;
   StreamSubscription<Object?>? _sub;
+  OverlayEntry? _screenLight;
   bool _starting = false;
   String? _error;
   int _waves = 0;
@@ -252,7 +259,7 @@ class _CameraTestState extends State<_CameraTest> {
       _starting = true;
       _error = null;
     });
-    final camera = widget.factory(torch: _torch);
+    final camera = widget.factory(lens: _lens, light: _light);
     if (!await camera.prepare()) {
       setState(() {
         _starting = false;
@@ -260,7 +267,11 @@ class _CameraTestState extends State<_CameraTest> {
       });
       return;
     }
-    _sub = camera.answers.listen((_) => setState(() => _waves++));
+    _sub = camera.answers.listen((_) {
+      setState(() => _waves++);
+      _screenLight?.markNeedsBuild();
+    });
+    camera.lightControl.screenLit.addListener(_syncScreenLight);
     await camera.start();
     if (!mounted) {
       await camera.stop();
@@ -270,20 +281,57 @@ class _CameraTestState extends State<_CameraTest> {
       _camera = camera;
       _starting = false;
     });
+    _syncScreenLight();
   }
 
   Future<void> _stop() async {
     final camera = _camera;
     unawaited(_sub?.cancel());
     _sub = null;
-    setState(() => _camera = null);
+    camera?.lightControl.screenLit.removeListener(_syncScreenLight);
+    _removeScreenLight();
+    if (mounted) setState(() => _camera = null);
     await camera?.stop();
   }
 
-  Future<void> _setTorch(bool on) async {
-    setState(() => _torch = on);
+  // Screen light: white over the whole screen, like it is during a session.
+  void _syncScreenLight() {
+    final camera = _camera;
+    final lit = camera != null && camera.lightControl.screenLit.value;
+    if (!lit) {
+      _removeScreenLight();
+      return;
+    }
+    if (_screenLight != null) return;
+    _screenLight = OverlayEntry(
+      builder: (_) => Material(
+        child: ScreenLightPanel(children: [
+          _Preview(camera),
+          const SizedBox(height: 12),
+          const Text('Screen light on. Wave for about a second.'),
+          Text('Waves detected: $_waves'),
+          const SizedBox(height: 16),
+          OutlinedButton(onPressed: _stop, child: const Text('Stop camera')),
+        ]),
+      ),
+    );
+    Overlay.of(context).insert(_screenLight!);
+  }
+
+  void _removeScreenLight() {
+    _screenLight?.remove();
+    _screenLight = null;
+  }
+
+  Future<void> _setOptions(CameraLens lens, CameraLight light) async {
+    setState(() {
+      _lens = lens;
+      _light = light;
+    });
     final services = AppServices.maybeInstance;
-    if (services != null) await services.updateSettings(services.settings.copyWith(cameraTorch: on));
+    if (services != null) {
+      await services.updateSettings(services.settings.copyWith(cameraLens: lens, cameraLight: light));
+    }
     if (_camera != null) {
       await _stop();
       await _start();
@@ -293,6 +341,7 @@ class _CameraTestState extends State<_CameraTest> {
   @override
   void dispose() {
     _sub?.cancel();
+    _removeScreenLight();
     _camera?.stop();
     super.dispose();
   }
@@ -304,16 +353,10 @@ class _CameraTestState extends State<_CameraTest> {
       icon: Icons.waving_hand,
       title: 'Wave at the phone',
       children: [
-        Text(_torch
-            ? 'Back camera with the flashlight on. Prop the phone with its back towards you and wave for about a second.'
-            : 'Front camera. Wave for about a second; a single jolt (like turning over) is ignored.'),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Flashlight'),
-          subtitle: const Text('Lights the room so a wave can be seen in the dark'),
-          value: _torch,
-          onChanged: _starting ? null : _setTorch,
-        ),
+        const Text('Wave for about a second; a single jolt (like turning over) is ignored.'),
+        const SizedBox(height: 12),
+        CameraOptions(lens: _lens, light: _light, onChanged: _setOptions, enabled: !_starting),
+        const SizedBox(height: 12),
         FilledButton.tonal(
           onPressed: _starting ? null : (camera == null ? _start : _stop),
           child: Text(camera != null ? 'Stop camera' : (_starting ? 'Starting…' : 'Start camera')),

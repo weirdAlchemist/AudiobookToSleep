@@ -10,6 +10,7 @@ import '../answers/camera_listener.dart';
 import '../core/positions.dart';
 import '../session/night_record.dart';
 import '../session/session_controller.dart';
+import 'camera_options.dart';
 import 'theme.dart';
 
 class NightScreen extends StatefulWidget {
@@ -62,12 +63,11 @@ class _NightScreenState extends State<NightScreen> {
   }
 
   String get _status => switch (c.phase) {
-        SessionPhase.idle || SessionPhase.listening => 'Listening…',
-        SessionPhase.checking => c.usable.isEmpty
-            ? 'Still awake? Tap!'
-            : 'Still awake? ${_capitalize(c.usable.first.hint)}!',
-        SessionPhase.fadingOut => 'Good night 🌙',
-      };
+    SessionPhase.idle || SessionPhase.listening => 'Listening…',
+    SessionPhase.checking =>
+      c.usable.isEmpty ? 'Still awake? Tap!' : 'Still awake? ${_capitalize(c.usable.first.hint)}!',
+    SessionPhase.fadingOut => 'Good night 🌙',
+  };
 
   String get _hint {
     final ways = [for (final l in c.usable) l.hint, 'tap the screen'];
@@ -92,44 +92,83 @@ class _NightScreenState extends State<NightScreen> {
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: c.signOfLife,
-          child: SafeArea(
-            child: Center(
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 600),
-                opacity: checking ? 1 : 0.55,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(c.target.title, style: TextStyle(color: muted), textAlign: TextAlign.center),
-                      const SizedBox(height: 8),
-                      Text(_status,
-                          style: TextStyle(fontSize: 26, color: checking ? accent : Colors.white),
-                          textAlign: TextAlign.center),
-                      const SizedBox(height: 8),
-                      Text(c.untilNext == null ? '' : formatDuration(c.untilNext! + const Duration(milliseconds: 999)),
-                          style: TextStyle(fontSize: 48, color: muted, fontFeatures: const [FontFeature.tabularFigures()])),
-                      if (widget.camera != null) _CameraPreview(widget.camera!),
-                      for (final l in c.usable)
-                        ValueListenableBuilder(
-                          valueListenable: l.note,
-                          builder: (_, note, _) => note == null
-                              ? const SizedBox.shrink()
-                              : Text(note, style: TextStyle(color: muted)),
-                        ),
-                      const SizedBox(height: 16),
-                      Text(_hint, style: TextStyle(color: muted, fontSize: 13), textAlign: TextAlign.center),
-                      const SizedBox(height: 24),
-                      OutlinedButton(
-                        onPressed: () => c.end(EndReason.ended),
-                        child: const Text('End session'),
+          child: Stack(
+            children: [
+              SafeArea(
+                child: Center(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 600),
+                    opacity: checking ? 1 : 0.55,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            c.target.title,
+                            style: TextStyle(color: muted),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _status,
+                            style: TextStyle(fontSize: 26, color: checking ? accent : Colors.white),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            c.untilNext == null ? '' : formatDuration(c.untilNext! + const Duration(milliseconds: 999)),
+                            style: TextStyle(
+                              fontSize: 48,
+                              color: muted,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                          if (widget.camera != null) _CameraPreview(widget.camera!),
+                          for (final l in c.usable)
+                            ValueListenableBuilder(
+                              valueListenable: l.note,
+                              builder: (_, note, _) =>
+                                  note == null ? const SizedBox.shrink() : Text(note, style: TextStyle(color: muted)),
+                            ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _hint,
+                            style: TextStyle(color: muted, fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          OutlinedButton(onPressed: () => c.end(EndReason.ended), child: const Text('End session')),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+              // Screen light: white at full brightness while the camera watches.
+              if (widget.camera case final camera?)
+                ValueListenableBuilder(
+                  valueListenable: camera.lightControl.screenLit,
+                  builder: (_, lit, _) => !lit
+                      ? const SizedBox.shrink()
+                      : Positioned.fill(
+                          child: ScreenLightPanel(
+                            children: [
+                              Text(_status, style: const TextStyle(fontSize: 26)),
+                              const SizedBox(height: 8),
+                              Text(
+                                c.untilNext == null
+                                    ? ''
+                                    : formatDuration(c.untilNext! + const Duration(milliseconds: 999)),
+                                style: const TextStyle(fontSize: 40),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text('Wave or tap if you\'re awake.'),
+                            ],
+                          ),
+                        ),
+                ),
+            ],
           ),
         ),
       ),
@@ -145,31 +184,31 @@ class _CameraPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
-        valueListenable: camera.controller,
-        builder: (_, controller, _) {
-          if (controller == null || !controller.value.isInitialized) return const SizedBox.shrink();
-          return ValueListenableBuilder(
-            valueListenable: camera.moving,
-            builder: (_, moving, _) => Container(
-              width: 96,
-              height: 72,
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: moving ? accent : Colors.transparent, width: 2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Opacity(
-                opacity: 0.5,
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(width: 160, height: 120, child: CameraPreview(controller)),
-                ),
-              ),
+    valueListenable: camera.controller,
+    builder: (_, controller, _) {
+      if (controller == null || !controller.value.isInitialized) return const SizedBox.shrink();
+      return ValueListenableBuilder(
+        valueListenable: camera.moving,
+        builder: (_, moving, _) => Container(
+          width: 96,
+          height: 72,
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: moving ? accent : Colors.transparent, width: 2),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Opacity(
+            opacity: 0.5,
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(width: 160, height: 120, child: CameraPreview(controller)),
             ),
-          );
-        },
+          ),
+        ),
       );
+    },
+  );
 }
 
 String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);

@@ -55,11 +55,18 @@ void main() {
     expect(s.checkInIntervalMin, 5);
     expect(s.voiceEnabled, isTrue);
     expect(s.cameraEnabled, isFalse);
-    expect(s.cameraTorch, isFalse);
+    expect(s.cameraLens, CameraLens.front);
+    expect(s.cameraLight, CameraLight.off);
     expect(s.voiceLocales, isEmpty, reason: 'follow the phone by default');
     expect(AppSettings.fromJson(s.copyWith(voiceLocales: ['de_DE', 'en_US']).toJson()).voiceLocales,
         ['de_DE', 'en_US']);
-    expect(AppSettings.fromJson(s.copyWith(cameraTorch: true).toJson()).cameraTorch, isTrue);
+    expect(AppSettings.fromJson(s.copyWith(cameraLight: CameraLight.screen).toJson()).cameraLight, CameraLight.screen);
     expect(AppSettings.fromJson(s.toJson()).sleep.checkInInterval, const Duration(minutes: 5));
+  });
+
+  test('the old flashlight switch becomes back camera + flashlight', () {
+    final s = AppSettings.fromJson({'cameraEnabled': true, 'cameraTorch': true});
+    expect(s.cameraLens, CameraLens.back);
+    expect(s.cameraLight, CameraLight.flashlight);
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_services.dart';
 import '../session/app_settings.dart';
+import 'camera_options.dart';
 import 'voice_languages_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -61,17 +62,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SwitchListTile(
               title: const Text('Answer by waving at the camera'),
-              subtitle: const Text('Front camera, on only during check-ins. Needs some light.'),
+              subtitle: const Text('On only during check-ins.'),
               value: s.cameraEnabled,
               onChanged: (v) => _set(s.copyWith(cameraEnabled: v)),
             ),
-            SwitchListTile(
-              title: const Text('Flashlight for the camera'),
-              subtitle: const Text('Lights the room during check-ins so a wave can be seen in the dark. '
-                  'Uses the back camera: prop the phone with its back towards you.'),
-              value: s.cameraTorch,
-              onChanged: s.cameraEnabled ? (v) => _set(s.copyWith(cameraTorch: v)) : null,
-            ),
+            if (s.cameraEnabled)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                child: CameraOptions(
+                  lens: s.cameraLens,
+                  light: s.cameraLight,
+                  onChanged: (lens, light) => _set(s.copyWith(cameraLens: lens, cameraLight: light)),
+                ),
+              ),
           ],
         ),
       );

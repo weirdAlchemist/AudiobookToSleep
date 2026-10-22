@@ -11,5 +11,7 @@ class MainActivity : AudioServiceActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MediaBridge.CHANNEL)
             .setMethodCallHandler(MediaBridge(applicationContext))
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DeviceBridge.CHANNEL)
+            .setMethodCallHandler(DeviceBridge(this))
     }
 }

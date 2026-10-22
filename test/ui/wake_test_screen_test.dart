@@ -4,6 +4,7 @@ import 'package:audiobook_to_sleep/answers/camera_listener.dart';
 import 'package:audiobook_to_sleep/answers/voice_listener.dart';
 import 'package:audiobook_to_sleep/core/voice_commands.dart';
 import 'package:audiobook_to_sleep/session/answer_listener.dart';
+import 'package:audiobook_to_sleep/session/app_settings.dart';
 import 'package:audiobook_to_sleep/ui/wake_test_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,7 @@ class FakeVoice extends VoiceListener {
 }
 
 class FakeCamera extends CameraListener {
-  FakeCamera({super.torch});
+  FakeCamera({super.lens, super.light});
 
   bool running = false;
   final answersCtrl = StreamController<Answer>.broadcast();
@@ -56,8 +57,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: WakeTestScreen(
         voiceFactory: () => voice,
-        cameraFactory: ({bool torch = false}) {
-          final c = FakeCamera(torch: torch);
+        cameraFactory: ({CameraLens lens = CameraLens.front, CameraLight light = CameraLight.off}) {
+          final c = FakeCamera(lens: lens, light: light);
           cameras.add(c);
           return c;
         },
@@ -111,7 +112,7 @@ void main() {
     await tester.pump();
     final camera = cameras.single;
     expect(camera.running, isTrue);
-    expect(camera.torch, isFalse);
+    expect(camera.light, CameraLight.off);
 
     camera.answersCtrl.add(Answer.awake);
     camera.noteValue.value = 'Too dark for the camera to see you';
@@ -120,7 +121,7 @@ void main() {
     expect(find.text('Too dark for the camera to see you'), findsOneWidget);
   });
 
-  testWidgets('turning on the flashlight restarts the camera with the torch', (tester) async {
+  testWidgets('choosing the flashlight with the front camera restarts the camera with it', (tester) async {
     await pump(tester);
     await tester.tap(find.text('Start camera'));
     await tester.pump();
@@ -128,9 +129,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(cameras, hasLength(2));
     expect(cameras.first.running, isFalse);
-    expect(cameras.last.torch, isTrue);
+    expect(cameras.last.lens, CameraLens.front);
+    expect(cameras.last.light, CameraLight.flashlight);
     expect(cameras.last.running, isTrue);
-    expect(find.textContaining('Back camera with the flashlight on'), findsOneWidget);
+    expect(find.textContaining('Front camera with the flashlight on'), findsOneWidget);
+  });
+
+  testWidgets('screen light is only offered with the front camera', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Screen'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('The screen turns white'), findsOneWidget);
+    await tester.tap(find.text('Back'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Back camera with its flashlight'), findsOneWidget,
+        reason: 'switches to the flashlight, since the screen faces away');
+  });
+
+  testWidgets('screen light covers the whole screen while the camera runs', (tester) async {
+    await pump(tester);
+    await tester.tap(find.text('Screen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start camera'));
+    await tester.pump();
+    cameras.last.lightControl.screenLit.value = true; // what start() does on a phone
+    await tester.pump();
+    expect(find.text('Screen light on. Wave for about a second.'), findsOneWidget);
+    cameras.last.answersCtrl.add(Answer.awake);
+    await tester.pump();
+    expect(find.text('Waves detected: 1'), findsOneWidget);
+    await tester.tap(find.text('Stop camera').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Screen light on. Wave for about a second.'), findsNothing);
   });
 
   testWidgets('headphone test is hidden without the built-in player', (tester) async {

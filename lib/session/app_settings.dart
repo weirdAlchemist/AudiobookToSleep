@@ -1,5 +1,10 @@
 import '../core/sleep_detector.dart';
 
+enum CameraLens { front, back }
+
+/// Light during check-ins so a wave can be seen in the dark.
+enum CameraLight { off, flashlight, screen }
+
 class AppSettings {
   const AppSettings({
     this.checkInIntervalMin = 10,
@@ -10,7 +15,8 @@ class AppSettings {
     this.keepScreenOn = true,
     this.voiceEnabled = true,
     this.cameraEnabled = false,
-    this.cameraTorch = false,
+    this.cameraLens = CameraLens.front,
+    this.cameraLight = CameraLight.off,
     this.voiceLocales = const [],
   });
 
@@ -23,8 +29,12 @@ class AppSettings {
   final bool voiceEnabled;
   final bool cameraEnabled;
 
-  /// Light the scene with the flashlight (back camera) while watching for a wave.
-  final bool cameraTorch;
+  /// Which camera watches for a wave.
+  final CameraLens cameraLens;
+
+  /// Light while watching: the flashlight (works with either camera) or the
+  /// screen at full brightness (front camera).
+  final CameraLight cameraLight;
 
   /// Recognizer languages for voice answers, e.g. ['de_DE', 'en_US'].
   /// Empty: follow the phone's language.
@@ -48,7 +58,8 @@ class AppSettings {
     bool? keepScreenOn,
     bool? voiceEnabled,
     bool? cameraEnabled,
-    bool? cameraTorch,
+    CameraLens? cameraLens,
+    CameraLight? cameraLight,
     List<String>? voiceLocales,
   }) =>
       AppSettings(
@@ -60,7 +71,8 @@ class AppSettings {
         keepScreenOn: keepScreenOn ?? this.keepScreenOn,
         voiceEnabled: voiceEnabled ?? this.voiceEnabled,
         cameraEnabled: cameraEnabled ?? this.cameraEnabled,
-        cameraTorch: cameraTorch ?? this.cameraTorch,
+        cameraLens: cameraLens ?? this.cameraLens,
+        cameraLight: cameraLight ?? this.cameraLight,
         voiceLocales: voiceLocales ?? this.voiceLocales,
       );
 
@@ -73,7 +85,8 @@ class AppSettings {
         'keepScreenOn': keepScreenOn,
         'voiceEnabled': voiceEnabled,
         'cameraEnabled': cameraEnabled,
-        'cameraTorch': cameraTorch,
+        'cameraLens': cameraLens.name,
+        'cameraLight': cameraLight.name,
         'voiceLocales': voiceLocales,
       };
 
@@ -88,8 +101,15 @@ class AppSettings {
       keepScreenOn: j['keepScreenOn'] as bool? ?? d.keepScreenOn,
       voiceEnabled: j['voiceEnabled'] as bool? ?? d.voiceEnabled,
       cameraEnabled: j['cameraEnabled'] as bool? ?? d.cameraEnabled,
-      cameraTorch: j['cameraTorch'] as bool? ?? d.cameraTorch,
+      // Before lens/light existed, a flashlight meant the back camera.
+      cameraLens: _byName(CameraLens.values, j['cameraLens']) ??
+          (j['cameraTorch'] == true ? CameraLens.back : d.cameraLens),
+      cameraLight: _byName(CameraLight.values, j['cameraLight']) ??
+          (j['cameraTorch'] == true ? CameraLight.flashlight : d.cameraLight),
       voiceLocales: (j['voiceLocales'] as List?)?.cast<String>() ?? d.voiceLocales,
     );
   }
 }
+
+T? _byName<T extends Enum>(List<T> values, Object? name) =>
+    values.where((v) => v.name == name).firstOrNull;

@@ -16,7 +16,9 @@ import 'night_screen.dart';
 Future<NightRecord?> runSleepSession(BuildContext context, PlaybackTarget target) async {
   final services = AppServices.instance;
   final settings = services.settings;
-  final camera = settings.cameraEnabled ? CameraListener(torch: settings.cameraTorch) : null;
+  final camera = settings.cameraEnabled
+      ? CameraListener(lens: settings.cameraLens, light: settings.cameraLight)
+      : null;
   final listeners = <AnswerListener>[
     if (settings.voiceEnabled) VoiceListener(locales: settings.voiceLocales),
     ?camera,
