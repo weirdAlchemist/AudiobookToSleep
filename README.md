@@ -72,6 +72,11 @@ flutter run           # on a connected phone
 flutter build apk     # Android
 ```
 
+Release builds shrink code with R8, which can break plugins that Dart calls over JNI
+(`shared_preferences_android`, and the `jni` runtime itself). The keep rules in
+`android/app/proguard-rules.pro` cover them. After upgrading plugins, check a release APK with
+`tool/check_jni_runtime.py` and `tool/check_jni_bindings.py`; both fail if a looked-up name is missing.
+
 The app was written with Flutter 3.47 / Dart 3.13. Minimum Android version is Flutter's default.
 
 ## Layout

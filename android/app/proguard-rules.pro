@@ -1,10 +1,18 @@
-# shared_preferences_android 2.5.x is called from Dart over JNI, which finds
-# Java methods by exact name and signature at runtime. The plugin ships no
-# keep rules, so R8 renames things in release builds and startup fails with
-# NoSuchMethodError on SharedPreferencesApiRegistrar.getAll.
-#
-# Keep the plugin's classes, and the original names of the Kotlin types that
-# appear in the signatures Dart looks up (see lib/src/messages.g.jni.dart).
+# Some plugins are called from Dart over JNI (the `jni` package), which finds
+# Java/Kotlin classes, fields and methods by exact name at runtime. R8 renames
+# or removes anything it thinks is unused, so without these rules release
+# builds fail at startup (e.g. "Loading settings failed").
+
+# shared_preferences_android 2.5.x ships no keep rules. Dart looks up its
+# classes and methods by name (lib/src/messages.g.jni.dart).
 -keep class io.flutter.plugins.sharedpreferences.** { *; }
--keepnames class kotlin.coroutines.Continuation
+
+# Kotlin types that appear in those signatures, or that the jni runtime itself
+# looks up to call Kotlin suspend functions: Unit.INSTANCE,
+# Result$Failure.exception, IntrinsicsKt.getCOROUTINE_SUSPENDED() (inherited
+# from IntrinsicsKt's hidden parent classes), CoroutineSingletons.
+-keep class kotlin.coroutines.** { *; }
+-keep class kotlin.Unit { *; }
+-keep class kotlin.Result { *; }
+-keep class kotlin.Result$* { *; }
 -keepnames class kotlin.jvm.internal.DefaultConstructorMarker
