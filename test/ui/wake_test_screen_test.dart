@@ -79,6 +79,12 @@ void main() {
     await tester.pump();
     expect(voice.listening, isTrue);
     expect(find.text('Listening…'), findsOneWidget);
+    voice.hearing.value = 'ok';
+    await tester.pump();
+    expect(find.text('Hearing: "ok"'), findsOneWidget);
+    voice.diagnostics.value = 'Recognizer error: error_language_not_supported';
+    await tester.pump();
+    expect(find.text('Recognizer error: error_language_not_supported'), findsOneWidget);
 
     voice.heardCtrl.add(('the rain kept falling', null));
     voice.heardCtrl.add(("I'm awake", VoiceCommand.awake));

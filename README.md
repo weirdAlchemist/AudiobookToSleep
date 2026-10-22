@@ -12,7 +12,7 @@ Phones can't see whether you're asleep, so the app asks gently:
 
 1. Start a **sleep session**. The audio plays, and the screen goes black.
 2. Every *N* minutes (default 10) the volume **dips**. That's the "still awake?" check.
-3. If you're awake, **tap the screen**, **say "I'm awake"**, **wave at the phone**, or press
+3. If you're awake, **tap the screen**, **say "OK"**, **wave at the phone**, or press
    **skip** on your headphones (built-in player only). The volume comes back and the clock restarts.
 4. If nobody answers within the response window (default 60 s), the audio **fades out and stops**.
    An answer during the fade rescues it.
@@ -51,7 +51,7 @@ library.
 
 Both options are in Settings and only run **during a check-in and the fade-out**, never all night.
 
-**Voice** (on by default): say *"I'm awake"*, *"still here"* or *"keep going"*, or *"good night"* to
+**Voice** (on by default): say *"OK"*, *"I'm awake"*, *"still here"* or *"keep going"*, or *"good night"* to
 stop now and keep your exact place. The audio drops to 20% during voice check-ins so you can be heard.
 Only short utterances (four words or fewer) with distinctive phrases count, so a narrator saying
 "awake" doesn't answer for you. Uses the phone's speech recognizer (Google or Apple). English only. Some

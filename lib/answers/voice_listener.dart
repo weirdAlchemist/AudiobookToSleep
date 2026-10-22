@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../core/voice_commands.dart';
@@ -11,12 +12,20 @@ class VoiceListener extends AnswerListener {
   final SpeechToText _speech = SpeechToText();
   final _answers = StreamController<Answer>.broadcast();
   final _heard = StreamController<(String, VoiceCommand?)>.broadcast();
+
+  /// Words recognized so far in the current utterance (shown, never acted on).
+  final ValueNotifier<String> hearing = ValueNotifier('');
+
+  /// The recognizer's latest status or error, for the test screen.
+  final ValueNotifier<String?> diagnostics = ValueNotifier(null);
+
+  static const localeId = 'en_US';
   bool _ready = false;
   bool _wanted = false;
   Timer? _restart;
 
   @override
-  String get hint => 'say "I\'m awake"';
+  String get hint => 'say "OK"';
 
   @override
   bool get wantsQuietCheckIn => true;
@@ -33,9 +42,17 @@ class VoiceListener extends AnswerListener {
     if (_ready) return true;
     try {
       // Asks for microphone permission the first time.
-      _ready = await _speech.initialize(onStatus: _onStatus, onError: (_) => _scheduleRestart());
-    } catch (_) {
+      _ready = await _speech.initialize(
+        onStatus: _onStatus,
+        onError: (e) {
+          diagnostics.value = 'Recognizer error: ${e.errorMsg}';
+          _scheduleRestart();
+        },
+      );
+      if (!_ready) diagnostics.value = 'Speech recognition is not available on this phone';
+    } catch (e) {
       _ready = false;
+      diagnostics.value = 'Speech recognition failed to start: $e';
     }
     return _ready;
   }
@@ -51,6 +68,7 @@ class VoiceListener extends AnswerListener {
   Future<void> stop() async {
     _wanted = false;
     _restart?.cancel();
+    hearing.value = '';
     if (_speech.isListening) await _speech.cancel();
   }
 
@@ -58,8 +76,11 @@ class VoiceListener extends AnswerListener {
     if (!_wanted || _speech.isListening) return;
     await _speech.listen(
       onResult: (result) {
-        // Final results only: interim snippets of narration look like commands.
+        hearing.value = result.recognizedWords;
+        // Act on final results only: interim snippets of narration look like
+        // commands.
         if (!result.finalResult) return;
+        hearing.value = '';
         for (final alt in result.alternates) {
           final command = matchVoiceCommand(alt.recognizedWords);
           if (command != null) {
@@ -72,18 +93,19 @@ class VoiceListener extends AnswerListener {
       },
       listenOptions: SpeechListenOptions(
         listenMode: ListenMode.dictation,
-        partialResults: false,
+        partialResults: true,
         cancelOnError: false,
-        localeId: 'en_US',
+        localeId: localeId,
         listenFor: const Duration(minutes: 2),
         pauseFor: const Duration(seconds: 8),
-        contextualPhrases: const ["I'm awake", 'still here', 'keep going', 'good night'],
+        contextualPhrases: const ['OK', "I'm awake", 'still here', 'keep going', 'good night'],
       ),
     );
   }
 
   // Recognition stops by itself after silence; keep it going while wanted.
   void _onStatus(String status) {
+    if (status == SpeechToText.listeningStatus) diagnostics.value = 'Listening ($localeId)';
     if (status == SpeechToText.doneStatus || status == SpeechToText.notListeningStatus) {
       _scheduleRestart();
     }

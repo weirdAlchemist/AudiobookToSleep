@@ -42,7 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             SwitchListTile(
               title: const Text('Answer by voice'),
-              subtitle: const Text('Say "I\'m awake", or "good night" to stop now. '
+              subtitle: const Text('Say "OK" or "I\'m awake", or "good night" to stop now. '
                   'The microphone is on only during check-ins.'),
               value: s.voiceEnabled,
               onChanged: (v) => _set(s.copyWith(voiceEnabled: v)),

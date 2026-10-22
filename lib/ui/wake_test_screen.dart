@@ -178,16 +178,33 @@ class _VoiceTestState extends State<_VoiceTest> {
   @override
   Widget build(BuildContext context) => _Section(
         icon: Icons.mic,
-        title: 'Say "I\'m awake"',
+        title: 'Say "OK"',
         children: [
-          const Text('Also "still here", "keep going", or "good night" to stop. '
-              'During a session the book plays quietly while the app listens. Try that too.'),
+          const Text('Or "I\'m awake", "still here", "keep going"; "good night" stops. Say it on its own: '
+              'longer sentences are ignored so the narrator can\'t answer for you.'),
           const SizedBox(height: 10),
           FilledButton.tonal(
             onPressed: _starting ? null : _toggle,
             child: Text(_listening ? 'Stop listening' : (_starting ? 'Starting…' : 'Start listening')),
           ),
-          if (_listening) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Listening…')),
+          if (_listening) ...[
+            ValueListenableBuilder(
+              valueListenable: _voice.hearing,
+              builder: (_, words, _) => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(words.isEmpty ? 'Listening…' : 'Hearing: "$words"'),
+              ),
+            ),
+          ],
+          ValueListenableBuilder(
+            valueListenable: _voice.diagnostics,
+            builder: (_, status, _) => status == null
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(status, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                  ),
+          ),
           if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           for (final (words, command) in _heard)
             Padding(

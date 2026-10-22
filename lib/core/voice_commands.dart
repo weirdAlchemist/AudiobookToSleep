@@ -9,6 +9,9 @@ enum VoiceCommand { awake, stop }
 const _awakePhrases = [
   "i'm awake", 'im awake', 'awake', 'still here', "i'm here", "i'm listening",
   'keep going', 'keep playing', 'continue',
+  // Short and easy to recognize. Only counts when said on its own or in a very
+  // short phrase (see _maxWords), so an "okay" inside narration is ignored.
+  'ok', 'okay',
 ];
 const _stopPhrases = ['good night', 'goodnight', 'stop playing', 'stop the book'];
 const _maxWords = 4;

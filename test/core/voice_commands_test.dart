@@ -8,6 +8,16 @@ void main() {
     }
   });
 
+  test('OK is a trigger word, on its own or in a very short phrase', () {
+    for (final said in ['OK', 'ok.', 'Okay', 'okay okay', 'OK I\'m here']) {
+      expect(matchVoiceCommand(said), VoiceCommand.awake, reason: said);
+    }
+    expect(matchVoiceCommand('OK good night'), VoiceCommand.stop, reason: 'stop still wins');
+    expect(matchVoiceCommand('"Okay," he said, and walked out into the night'), isNull,
+        reason: 'narration is too long to count');
+    expect(matchVoiceCommand('broken'), isNull, reason: 'not a whole word');
+  });
+
   test('recognizes stop phrases, and stop wins over awake', () {
     expect(matchVoiceCommand('Good night'), VoiceCommand.stop);
     expect(matchVoiceCommand('goodnight'), VoiceCommand.stop);
