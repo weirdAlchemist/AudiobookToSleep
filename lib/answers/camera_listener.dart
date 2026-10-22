@@ -12,6 +12,12 @@ import '../core/motion_detector.dart';
 import '../session/answer_listener.dart';
 
 class CameraListener extends AnswerListener {
+  /// With [torch], uses the back camera and keeps its flashlight on while
+  /// watching, since front cameras rarely have a flash. The phone then needs
+  /// its back towards the bed.
+  CameraListener({this.torch = false});
+
+  final bool torch;
   final _answers = StreamController<Answer>.broadcast();
   final MotionDetector _detector = MotionDetector();
   final Stopwatch _clock = Stopwatch()..start();
@@ -22,6 +28,10 @@ class CameraListener extends AnswerListener {
 
   /// True while the latest frames show movement (preview highlight).
   final ValueNotifier<bool> moving = ValueNotifier(false);
+
+  /// True while the flashlight is lit.
+  final ValueNotifier<bool> torchOn = ValueNotifier(false);
+  String? _torchNote;
 
   CameraDescription? _camera;
   bool _wanted = false;
@@ -42,10 +52,8 @@ class CameraListener extends AnswerListener {
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) return false;
-      _camera = cameras.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.front,
-        orElse: () => cameras.first,
-      );
+      final lens = torch ? CameraLensDirection.back : CameraLensDirection.front;
+      _camera = cameras.firstWhere((c) => c.lensDirection == lens, orElse: () => cameras.first);
       // Opening it once asks for camera permission while the user is looking.
       final probe = CameraController(_camera!, ResolutionPreset.low, enableAudio: false);
       await probe.initialize();
@@ -77,6 +85,15 @@ class CameraListener extends AnswerListener {
       }
       controller.value = c;
       await c.startImageStream(_onFrame);
+      if (torch) {
+        try {
+          await c.setFlashMode(FlashMode.torch);
+          torchOn.value = true;
+        } catch (_) {
+          _torchNote = 'This camera has no flashlight';
+          _note.value = _torchNote;
+        }
+      }
     } catch (_) {
       _wanted = false;
       controller.value = null;
@@ -91,8 +108,10 @@ class CameraListener extends AnswerListener {
     controller.value = null;
     _note.value = null;
     moving.value = false;
+    torchOn.value = false;
     if (c != null) {
       try {
+        if (torch) await c.setFlashMode(FlashMode.off);
         if (c.value.isStreamingImages) await c.stopImageStream();
       } catch (_) {}
       await c.dispose();
@@ -116,7 +135,9 @@ class CameraListener extends AnswerListener {
       );
       final waved = _detector.push(frame, now);
       moving.value = _detector.moving;
-      _note.value = _detector.tooDark ? 'Too dark for the camera to see you' : null;
+      _note.value = _detector.tooDark
+          ? (torch ? 'Too dark even with the flashlight' : 'Too dark for the camera to see you')
+          : _torchNote;
       if (waved) _answers.add(Answer.awake);
     } finally {
       _busy = false;

@@ -62,6 +62,14 @@ movement. A single jolt, like turning over in your sleep, is ignored. Frames are
 pixels and analysed on the phone; nothing is stored or sent. It needs some light (a night light is
 enough) and the screen on. In a dark room it shows "Too dark for the camera to see you".
 
+**Flashlight** (with waving, off by default): lights the room during check-ins so a wave can be seen in
+the dark. Front cameras rarely have a flash, so this uses the back camera: prop the phone with its
+back towards you. The light is on only while the app waits for your answer.
+
+**Test wake options** (home screen menu ⋮): try every way of answering without starting a session.
+You can tap, speak (it shows what it heard and whether it counts), wave (live preview, motion
+highlight, flashlight switch), and press headphone or lock-screen buttons.
+
 ## Building
 
 ```sh

@@ -55,6 +55,8 @@ void main() {
     expect(s.checkInIntervalMin, 5);
     expect(s.voiceEnabled, isTrue);
     expect(s.cameraEnabled, isFalse);
+    expect(s.cameraTorch, isFalse);
+    expect(AppSettings.fromJson(s.copyWith(cameraTorch: true).toJson()).cameraTorch, isTrue);
     expect(AppSettings.fromJson(s.toJson()).sleep.checkInInterval, const Duration(minutes: 5));
   });
 }

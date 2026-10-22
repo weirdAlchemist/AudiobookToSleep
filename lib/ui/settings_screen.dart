@@ -53,6 +53,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: s.cameraEnabled,
               onChanged: (v) => _set(s.copyWith(cameraEnabled: v)),
             ),
+            SwitchListTile(
+              title: const Text('Flashlight for the camera'),
+              subtitle: const Text('Lights the room during check-ins so a wave can be seen in the dark. '
+                  'Uses the back camera: prop the phone with its back towards you.'),
+              value: s.cameraTorch,
+              onChanged: s.cameraEnabled ? (v) => _set(s.copyWith(cameraTorch: v)) : null,
+            ),
           ],
         ),
       );

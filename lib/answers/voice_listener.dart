@@ -10,6 +10,7 @@ import '../session/answer_listener.dart';
 class VoiceListener extends AnswerListener {
   final SpeechToText _speech = SpeechToText();
   final _answers = StreamController<Answer>.broadcast();
+  final _heard = StreamController<(String, VoiceCommand?)>.broadcast();
   bool _ready = false;
   bool _wanted = false;
   Timer? _restart;
@@ -22,6 +23,10 @@ class VoiceListener extends AnswerListener {
 
   @override
   Stream<Answer> get answers => _answers.stream;
+
+  /// Everything recognized, with the command it matched (if any). For the
+  /// wake-options test screen.
+  Stream<(String, VoiceCommand?)> get heard => _heard.stream;
 
   @override
   Future<bool> prepare() async {
@@ -58,10 +63,12 @@ class VoiceListener extends AnswerListener {
         for (final alt in result.alternates) {
           final command = matchVoiceCommand(alt.recognizedWords);
           if (command != null) {
+            _heard.add((alt.recognizedWords, command));
             _answers.add(command == VoiceCommand.stop ? Answer.stop : Answer.awake);
             return;
           }
         }
+        _heard.add((result.recognizedWords, null));
       },
       listenOptions: SpeechListenOptions(
         listenMode: ListenMode.dictation,

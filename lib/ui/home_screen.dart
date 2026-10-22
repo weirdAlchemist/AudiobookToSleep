@@ -8,6 +8,7 @@ import '../data/book.dart';
 import 'book_screen.dart';
 import 'external_screen.dart';
 import 'settings_screen.dart';
+import 'wake_test_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -67,10 +68,19 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Audiobook to Sleep'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.tune),
-            tooltip: 'Settings',
-            onPressed: () => _open(const SettingsScreen()),
+          PopupMenuButton<VoidCallback>(
+            tooltip: 'Menu',
+            onSelected: (action) => action(),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: () => _open(WakeTestScreen(audio: _services.audio)),
+                child: const ListTile(leading: Icon(Icons.checklist), title: Text('Test wake options')),
+              ),
+              PopupMenuItem(
+                value: () => _open(const SettingsScreen()),
+                child: const ListTile(leading: Icon(Icons.tune), title: Text('Settings')),
+              ),
+            ],
           ),
         ],
       ),

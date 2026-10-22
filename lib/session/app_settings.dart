@@ -10,6 +10,7 @@ class AppSettings {
     this.keepScreenOn = true,
     this.voiceEnabled = true,
     this.cameraEnabled = false,
+    this.cameraTorch = false,
   });
 
   final int checkInIntervalMin;
@@ -20,6 +21,9 @@ class AppSettings {
   final bool keepScreenOn;
   final bool voiceEnabled;
   final bool cameraEnabled;
+
+  /// Light the scene with the flashlight (back camera) while watching for a wave.
+  final bool cameraTorch;
 
   SleepSettings get sleep => SleepSettings(
         checkInInterval: Duration(minutes: checkInIntervalMin),
@@ -39,6 +43,7 @@ class AppSettings {
     bool? keepScreenOn,
     bool? voiceEnabled,
     bool? cameraEnabled,
+    bool? cameraTorch,
   }) =>
       AppSettings(
         checkInIntervalMin: checkInIntervalMin ?? this.checkInIntervalMin,
@@ -49,6 +54,7 @@ class AppSettings {
         keepScreenOn: keepScreenOn ?? this.keepScreenOn,
         voiceEnabled: voiceEnabled ?? this.voiceEnabled,
         cameraEnabled: cameraEnabled ?? this.cameraEnabled,
+        cameraTorch: cameraTorch ?? this.cameraTorch,
       );
 
   Map<String, Object> toJson() => {
@@ -60,6 +66,7 @@ class AppSettings {
         'keepScreenOn': keepScreenOn,
         'voiceEnabled': voiceEnabled,
         'cameraEnabled': cameraEnabled,
+        'cameraTorch': cameraTorch,
       };
 
   factory AppSettings.fromJson(Map<String, Object?> j) {
@@ -73,6 +80,7 @@ class AppSettings {
       keepScreenOn: j['keepScreenOn'] as bool? ?? d.keepScreenOn,
       voiceEnabled: j['voiceEnabled'] as bool? ?? d.voiceEnabled,
       cameraEnabled: j['cameraEnabled'] as bool? ?? d.cameraEnabled,
+      cameraTorch: j['cameraTorch'] as bool? ?? d.cameraTorch,
     );
   }
 }

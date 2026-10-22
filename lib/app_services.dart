@@ -32,12 +32,16 @@ class AppServices {
   final String? audioWarning;
 
   static late final AppServices instance;
+  static AppServices? _instance;
+
+  /// The services if startup has finished (null in widget tests).
+  static AppServices? get maybeInstance => _instance;
 
   static const _stepTimeout = Duration(seconds: 10);
 
   static Future<void> init() async {
     final (audio, audioWarning) = await _initAudio();
-    instance = AppServices._(
+    instance = _instance = AppServices._(
       audio,
       await _step('Opening the library', LibraryStore.open),
       await _step('Opening the night log', NightLog.open),
