@@ -54,8 +54,16 @@ Both options are in Settings and only run **during a check-in and the fade-out**
 **Voice** (on by default): say *"OK"*, *"I'm awake"*, *"still here"* or *"keep going"*, or *"good night"* to
 stop now and keep your exact place. The audio drops to 20% during voice check-ins so you can be heard.
 Only short utterances (four words or fewer) with distinctive phrases count, so a narrator saying
-"awake" doesn't answer for you. Uses the phone's speech recognizer (Google or Apple). English only. Some
-Android phones beep when the recognizer starts listening; turn voice off if that bothers you.
+"awake" doesn't answer for you. Uses the phone's speech recognizer (Google or Apple).
+
+**Voice languages** (Settings): by default voice follows the phone's language. You can pick one or more
+recognizer languages instead; with several, the phone takes turns listening in each for a few seconds
+(Android listens in one language at a time), so you may need to answer twice. "OK" works in every
+language. Built-in phrases exist for English, German, French, Spanish, Italian, Dutch, Portuguese,
+Swedish, Polish, Japanese, Chinese and Korean, e.g. *"ich bin wach"* / *"gute nacht"*,
+*「起きてる」* / *「おやすみ」*.
+
+Some Android phones beep when the recognizer starts listening; turn voice off if that bothers you.
 
 **Wave at the camera** (off by default): the front camera looks for about a second of continued
 movement. A single jolt, like turning over in your sleep, is ignored. Frames are shrunk to 48×36 grey

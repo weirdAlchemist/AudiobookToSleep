@@ -56,6 +56,9 @@ void main() {
     expect(s.voiceEnabled, isTrue);
     expect(s.cameraEnabled, isFalse);
     expect(s.cameraTorch, isFalse);
+    expect(s.voiceLocales, isEmpty, reason: 'follow the phone by default');
+    expect(AppSettings.fromJson(s.copyWith(voiceLocales: ['de_DE', 'en_US']).toJson()).voiceLocales,
+        ['de_DE', 'en_US']);
     expect(AppSettings.fromJson(s.copyWith(cameraTorch: true).toJson()).cameraTorch, isTrue);
     expect(AppSettings.fromJson(s.toJson()).sleep.checkInInterval, const Duration(minutes: 5));
   });

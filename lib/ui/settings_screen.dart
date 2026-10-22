@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_services.dart';
 import '../session/app_settings.dart';
+import 'voice_languages_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -46,6 +47,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'The microphone is on only during check-ins.'),
               value: s.voiceEnabled,
               onChanged: (v) => _set(s.copyWith(voiceEnabled: v)),
+            ),
+            ListTile(
+              enabled: s.voiceEnabled,
+              title: const Text('Voice languages'),
+              subtitle: Text(s.voiceLocales.isEmpty ? 'Follow phone language' : s.voiceLocales.join(', ')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                await Navigator.of(context)
+                    .push(MaterialPageRoute<void>(builder: (_) => const VoiceLanguagesScreen()));
+                setState(() => s = AppServices.instance.settings);
+              },
             ),
             SwitchListTile(
               title: const Text('Answer by waving at the camera'),

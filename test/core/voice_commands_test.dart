@@ -32,4 +32,47 @@ void main() {
     expect(matchVoiceCommand('awakened'), isNull);
     expect(matchVoiceCommand(''), isNull);
   });
+
+  group('other languages', () {
+    test('awake phrases', () {
+      for (final said in [
+        'Ich bin wach', 'noch da', 'Weiter!', // de
+        'Je suis réveillée.', "D'accord", // fr
+        'Estoy despierto', 'Sigo aquí', // es
+        'Sono sveglio', // it
+        'Ik ben wakker', // nl
+        'Estou acordada', // pt
+        'Jag är vaken', // sv
+        'Nie śpię', // pl
+        '起きてる', 'まだ起きてるよ', 'オーケー', // ja
+        '我醒着', // zh
+        '깨어 있어', '오케이', // ko
+      ]) {
+        expect(matchVoiceCommand(said), VoiceCommand.awake, reason: said);
+      }
+    });
+
+    test('stop phrases', () {
+      for (final said in ['Gute Nacht', 'Bonne nuit', 'Buenas noches', 'Buonanotte', 'Welterusten',
+          'Boa noite', 'God natt', 'Dobranoc', 'おやすみなさい', '晚安', '잘 자']) {
+        expect(matchVoiceCommand(said), VoiceCommand.stop, reason: said);
+      }
+    });
+
+    test('narration stays too long to count, also without spaces', () {
+      expect(matchVoiceCommand('Er lag noch lange wach und hörte dem Regen zu'), isNull);
+      expect(matchVoiceCommand('彼は夜遅くまで起きていて雨の音を聞いていた'), isNull);
+    });
+
+    test('example phrases for display', () {
+      expect(examplePhrases('de_DE'), 'OK, "ich bin wach", "bin wach" · stop: "gute nacht"');
+      expect(examplePhrases('tr_TR'), isNull);
+    });
+
+    test('language code from a locale id', () {
+      expect(languageOf('de_DE'), 'de');
+      expect(languageOf('ja-JP'), 'ja');
+      expect(languageOf('en'), 'en');
+    });
+  });
 }

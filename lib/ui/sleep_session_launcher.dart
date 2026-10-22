@@ -18,7 +18,7 @@ Future<NightRecord?> runSleepSession(BuildContext context, PlaybackTarget target
   final settings = services.settings;
   final camera = settings.cameraEnabled ? CameraListener(torch: settings.cameraTorch) : null;
   final listeners = <AnswerListener>[
-    if (settings.voiceEnabled) VoiceListener(),
+    if (settings.voiceEnabled) VoiceListener(locales: settings.voiceLocales),
     ?camera,
   ];
 

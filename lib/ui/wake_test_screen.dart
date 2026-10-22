@@ -17,7 +17,7 @@ import 'theme.dart';
 class WakeTestScreen extends StatelessWidget {
   const WakeTestScreen({
     super.key,
-    this.voiceFactory = VoiceListener.new,
+    this.voiceFactory = _realVoice,
     this.cameraFactory = _realCamera,
     this.audio,
   });
@@ -29,6 +29,8 @@ class WakeTestScreen extends StatelessWidget {
   final BookAudioHandler? audio;
 
   static CameraListener _realCamera({bool torch = false}) => CameraListener(torch: torch);
+  static VoiceListener _realVoice() =>
+      VoiceListener(locales: AppServices.maybeInstance?.settings.voiceLocales ?? const []);
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -196,6 +198,13 @@ class _VoiceTestState extends State<_VoiceTest> {
               ),
             ),
           ],
+          if (_listening)
+            for (final id in _voice.activeLocales)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('$id: ${examplePhrases(id) ?? '"OK"'}',
+                    style: const TextStyle(color: Colors.white60, fontSize: 12)),
+              ),
           ValueListenableBuilder(
             valueListenable: _voice.diagnostics,
             builder: (_, status, _) => status == null

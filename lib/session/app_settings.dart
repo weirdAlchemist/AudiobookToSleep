@@ -11,6 +11,7 @@ class AppSettings {
     this.voiceEnabled = true,
     this.cameraEnabled = false,
     this.cameraTorch = false,
+    this.voiceLocales = const [],
   });
 
   final int checkInIntervalMin;
@@ -24,6 +25,10 @@ class AppSettings {
 
   /// Light the scene with the flashlight (back camera) while watching for a wave.
   final bool cameraTorch;
+
+  /// Recognizer languages for voice answers, e.g. ['de_DE', 'en_US'].
+  /// Empty: follow the phone's language.
+  final List<String> voiceLocales;
 
   SleepSettings get sleep => SleepSettings(
         checkInInterval: Duration(minutes: checkInIntervalMin),
@@ -44,6 +49,7 @@ class AppSettings {
     bool? voiceEnabled,
     bool? cameraEnabled,
     bool? cameraTorch,
+    List<String>? voiceLocales,
   }) =>
       AppSettings(
         checkInIntervalMin: checkInIntervalMin ?? this.checkInIntervalMin,
@@ -55,6 +61,7 @@ class AppSettings {
         voiceEnabled: voiceEnabled ?? this.voiceEnabled,
         cameraEnabled: cameraEnabled ?? this.cameraEnabled,
         cameraTorch: cameraTorch ?? this.cameraTorch,
+        voiceLocales: voiceLocales ?? this.voiceLocales,
       );
 
   Map<String, Object> toJson() => {
@@ -67,6 +74,7 @@ class AppSettings {
         'voiceEnabled': voiceEnabled,
         'cameraEnabled': cameraEnabled,
         'cameraTorch': cameraTorch,
+        'voiceLocales': voiceLocales,
       };
 
   factory AppSettings.fromJson(Map<String, Object?> j) {
@@ -81,6 +89,7 @@ class AppSettings {
       voiceEnabled: j['voiceEnabled'] as bool? ?? d.voiceEnabled,
       cameraEnabled: j['cameraEnabled'] as bool? ?? d.cameraEnabled,
       cameraTorch: j['cameraTorch'] as bool? ?? d.cameraTorch,
+      voiceLocales: (j['voiceLocales'] as List?)?.cast<String>() ?? d.voiceLocales,
     );
   }
 }
