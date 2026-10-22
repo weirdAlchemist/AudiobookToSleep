@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../core/positions.dart';
@@ -11,6 +12,7 @@ import '../data/book.dart';
 
 class BookAudioHandler extends BaseAudioHandler with SeekHandler {
   BookAudioHandler() {
+    unawaited(_handleInterruptions());
     _player.playbackEventStream.listen((_) => _broadcast());
     _player.playingStream.listen((_) => _broadcast());
     _player.processingStateStream.listen((state) {
@@ -20,7 +22,14 @@ class BookAudioHandler extends BaseAudioHandler with SeekHandler {
 
   static const skipInterval = Duration(seconds: 30);
 
-  final AudioPlayer _player = AudioPlayer();
+  // Interruptions (calls, other apps, the speech recognizer) are handled
+  // below instead of by just_audio, so check-ins can ignore the recognizer.
+  final AudioPlayer _player = AudioPlayer(handleInterruptions: false);
+  bool _pausedByInterruption = false;
+
+  /// Set while the app's own speech recognizer is listening during a check-in:
+  /// it takes audio focus, but the book should keep playing (quietly).
+  bool ignoreFocusLoss = false;
   final _awake = StreamController<void>.broadcast();
   Book? book;
   String Function(Book, int)? _pathFor;
@@ -106,6 +115,25 @@ class BookAudioHandler extends BaseAudioHandler with SeekHandler {
       return;
     }
     await seekGlobal(globalPosition + delta);
+  }
+
+  Future<void> _handleInterruptions() async {
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration.speech());
+    // Headphones unplugged: always pause.
+    session.becomingNoisyEventStream.listen((_) => _player.pause());
+    session.interruptionEventStream.listen((event) {
+      if (event.begin) {
+        if (event.type == AudioInterruptionType.duck || ignoreFocusLoss) return;
+        if (_player.playing) {
+          _pausedByInterruption = true;
+          _player.pause();
+        }
+      } else {
+        if (event.type == AudioInterruptionType.pause && _pausedByInterruption) _player.play();
+        _pausedByInterruption = false;
+      }
+    });
   }
 
   Future<void> _loadTrack(int index, Duration offset) async {

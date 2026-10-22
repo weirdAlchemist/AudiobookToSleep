@@ -55,6 +55,13 @@ class SessionController extends ChangeNotifier {
   bool _ending = false;
   bool _listening = false;
 
+  /// Starting the microphone (speech recognizer) takes Android's audio focus,
+  /// and players pause when they lose it. Pauses while our own listeners run,
+  /// and briefly after they stop, are ours, not the user's.
+  static const focusGrace = Duration(seconds: 5);
+  DateTime? _focusGraceUntil;
+  bool _lastPlaying = true;
+
   double _volume = 1;
   Timer? _ticker;
   Timer? _fadeTimer;
@@ -99,14 +106,22 @@ class SessionController extends ChangeNotifier {
       final snap = await target.snapshot();
       if (!active) return;
       _lastPosition = snap.position;
+      _lastPlaying = snap.playing;
       if (snap.playing) _sawPlaying = true;
+      final now = clock.now();
       if (_fadingOut == null) {
         if (snap.completed) return await end(EndReason.bookEnd);
-        // Paused from the lock screen, headphones unplugged, or a call: the
-        // listener was clearly awake, so keep their exact place.
-        if (!snap.playing && _sawPlaying) return await end(EndReason.interrupted);
+        if (!snap.playing && _sawPlaying) {
+          if (_inFocusGrace(now)) {
+            // Our microphone paused it; once we're done listening, resume.
+            if (!_listening) await target.play();
+          } else {
+            // Paused from the lock screen, headphones unplugged, or a call:
+            // the listener was clearly awake, so keep their exact place.
+            return await end(EndReason.interrupted);
+          }
+        }
       }
-      final now = clock.now();
       switch (_detector.tick(now)) {
         case CheckIn():
           _onCheckIn();
@@ -227,13 +242,19 @@ class SessionController extends ChangeNotifier {
   void _backToListening() {
     phase = SessionPhase.listening;
     _fadeTo(1, const Duration(milliseconds: 1500));
-    unawaited(_stopListening());
+    unawaited(_stopListening().then((_) async {
+      if (!_lastPlaying && active) await target.play();
+    }));
     notifyListeners();
   }
+
+  bool _inFocusGrace(DateTime now) =>
+      _listening || (_focusGraceUntil != null && now.isBefore(_focusGraceUntil!));
 
   Future<void> _startListening() async {
     if (_listening) return;
     _listening = true;
+    await target.setAnswerListening(true);
     for (final l in usable) {
       await l.start();
     }
@@ -242,9 +263,11 @@ class SessionController extends ChangeNotifier {
   Future<void> _stopListening() async {
     if (!_listening) return;
     _listening = false;
+    _focusGraceUntil = clock.now().add(focusGrace);
     for (final l in usable) {
       await l.stop();
     }
+    await target.setAnswerListening(false);
   }
 
   Future<void> _setVolume(double level) async {

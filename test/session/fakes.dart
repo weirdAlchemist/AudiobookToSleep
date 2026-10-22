@@ -58,15 +58,24 @@ class FakeTarget extends PlaybackTarget {
     volumes.add(level);
   }
 
+  final List<bool> answerListening = [];
+
+  @override
+  Future<void> setAnswerListening(bool active) async => answerListening.add(active);
+
   @override
   Stream<void> get awakeSignals => skips.stream;
 }
 
 class FakeListener extends AnswerListener {
-  FakeListener({this.available = true, this.quiet = false});
+  FakeListener({this.available = true, this.quiet = false, this.onStart});
 
   final bool available;
   final bool quiet;
+
+  /// Runs when listening starts, e.g. to simulate the speech recognizer
+  /// taking audio focus and the player pausing.
+  final void Function()? onStart;
   bool running = false;
   int starts = 0;
   final _answers = StreamController<Answer>.broadcast();
@@ -83,6 +92,7 @@ class FakeListener extends AnswerListener {
   Future<void> start() async {
     running = true;
     starts++;
+    onStart?.call();
   }
 
   @override

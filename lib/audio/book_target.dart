@@ -35,5 +35,8 @@ class BookTarget extends PlaybackTarget {
   Future<void> setVolume(double level) => handler.setVolume(level);
 
   @override
+  Future<void> setAnswerListening(bool active) async => handler.ignoreFocusLoss = active;
+
+  @override
   Stream<void> get awakeSignals => handler.awakeSignals;
 }

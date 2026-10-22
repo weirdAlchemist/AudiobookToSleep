@@ -28,6 +28,11 @@ abstract class PlaybackTarget {
   /// Volume relative to where it was when the session started (0..1).
   Future<void> setVolume(double level);
 
+  /// Called when the app's own answer listeners (microphone, camera) start or
+  /// stop. The speech recognizer takes audio focus, so a player that can
+  /// should keep playing through that instead of pausing.
+  Future<void> setAnswerListening(bool active) async {}
+
   /// Presses of lock-screen / headphone skip buttons that should count as
   /// "I'm awake" during a session. Only the built-in player receives these.
   Stream<void> get awakeSignals => const Stream.empty();

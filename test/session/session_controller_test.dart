@@ -183,4 +183,54 @@ void main() {
       c.dispose();
     });
   });
+
+  group('the microphone taking audio focus (regression: check-in ended the session)', () {
+    test('a pause caused by our own listener is not "you stopped it"', () {
+      fakeAsync((async) {
+        // Like Spotify, or just_audio by default: pauses when the recognizer starts.
+        final voice = FakeListener(quiet: true, onStart: () => target.externalPause());
+        final c = controller(async, listeners: [voice]);
+        async.elapse(mins(10) + sec);
+        expect(voice.running, isTrue);
+        expect(target.playing, isFalse);
+        async.elapse(const Duration(seconds: 20));
+        expect(c.phase, SessionPhase.checking, reason: 'still waiting for an answer');
+        expect(finished, isEmpty);
+        expect(target.answerListening, [true]);
+
+        // Answering resumes playback.
+        voice.say(Answer.awake);
+        async.elapse(const Duration(seconds: 2));
+        expect(c.phase, SessionPhase.listening);
+        expect(target.playing, isTrue);
+        expect(target.answerListening, [true, false]);
+      });
+    });
+
+    test('no answer while paused by the microphone still ends as asleep', () {
+      fakeAsync((async) {
+        final voice = FakeListener(quiet: true, onStart: () => target.externalPause());
+        controller(async, listeners: [voice]);
+        async.elapse(mins(10) + sec);
+        async.elapse(const Duration(seconds: 95)); // response window + fade
+        expect(finished.single.reason, EndReason.noResponse);
+        expect(finished.single.resumePosition, const Duration(minutes: 59, seconds: 30));
+      });
+    });
+
+    test('a real pause after the grace period still ends the session', () {
+      fakeAsync((async) {
+        final voice = FakeListener(quiet: true, onStart: () => target.externalPause());
+        final c = controller(async, listeners: [voice]);
+        async.elapse(mins(10) + sec);
+        voice.say(Answer.awake);
+        async.elapse(SessionController.focusGrace + const Duration(seconds: 2));
+        expect(target.playing, isTrue);
+        target.externalPause();
+        async.elapse(const Duration(seconds: 2));
+        expect(c.phase, SessionPhase.idle);
+        expect(finished.single.reason, EndReason.interrupted);
+      });
+    });
+  });
 }
