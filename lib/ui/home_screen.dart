@@ -84,6 +84,19 @@ class _HomeScreenState extends State<HomeScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
+          if (_services.audioWarning != null) ...[
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SelectableText(
+                  'Background playback is unavailable, so books stop when the screen turns off '
+                  'and there are no lock-screen controls. Reason: ${_services.audioWarning}',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           if (ExternalMedia.supported) ...[
             Card(
               child: ListTile(
